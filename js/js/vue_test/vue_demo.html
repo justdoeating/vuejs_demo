@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../../plugins/jquery/jquery-2.2.3.min.js"></script>
+    <script src="../../plugins/vuejs/vue.min.js"></script>
+
+</head>
+<body>
+    <div id="app1">
+        <p v-show="ok">{{msg}}</p>
+        <p v-if="type==='all'">this all</p>
+        <p v-else-if="type==='some'">this some</p>
+        <p v-else-if="type==='none'">this none</p>
+    </div>
+    <script>
+        var vm=new Vue({
+            data:{
+                msg:'this is msg',
+                ok:'',
+                type:'all'
+            }
+        });
+        function getQueryString(name){
+            var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+            var r = window.location.search.substr(1).match(reg);
+            if(r!=null)return  unescape(r[2]); return null;
+        };
+
+        function getType(){
+            var type=getQueryString('type');
+            vm.type=type;
+        }
+        getType();
+        vm.$mount('#app1');
+    </script>
+</body>
+</html>

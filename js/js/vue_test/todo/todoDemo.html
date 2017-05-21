@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../../../plugins/layui/css/layui.css">
+    <style>
+        #todoApp{
+            border: 2px solid #5fb878;
+            width: 350px;
+            padding-left: 50px;
+            margin-left: 350px;
+        }
+        #toolbar{
+            padding-left: 10px;
+            padding-top: 10px;
+            padding-bottom:10px;
+        }
+        a{
+            color: inherit;
+            margin: 3px;
+            padding: 3px 7px;
+            text-decoration: none;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            border-color: green;
+        }
+        .selected{
+            background-color: #01AAED;
+        }
+        [v-cloak]{
+            display: none;
+        }
+        .completed{
+            color: #d9d9d9;
+            text-decoration: line-through;
+        }
+        #addNew{
+            height: 30px;
+            width: 300px;
+            background-color: rgba(0, 255, 205, 0.168627);
+            padding: 16px 16px 16px 20px;
+            border: none;
+            font-family: inherit;
+            font-size: x-large;
+            font-weight: 300;
+        }
+    </style>
+</head>
+<body>
+    <section style="padding:100px;">
+        <div id="todoApp">
+            <h2 style="font-family: inherit;
+    font-size: x-large;
+    font-weight: 300;
+                line-height: 1.4em;
+                margin-left: 50px;
+                padding: 30px;">My TodoList</h2>
+
+            <div>
+                <input v-on:keyup.enter="addNew"  id="addNew" v-model="newTodo" placeholder="请输入新的Todo...">
+            </div>
+            <hr style="margin-right: 45px;">
+            <div id="toolbar">
+                <a href="#/all" :class="{ selected: todoType == 'all' }">所有</a>
+                <a href="#/active" :class="{ selected: todoType == 'active' }">未做</a>
+                <a href="#/completed" :class="{ selected: todoType == 'completed' }">已做</a>
+            </div>
+            <div>
+                <ul>
+                    <li v-for="(el,index) in filterTodos" style="height: 30px;" v-bind:id="'li'+index">
+                        <div class="view" v-bind:class="{completed:el.completed}">
+                            <input type="checkbox" v-model="el.completed">
+                            <label v-cloak v-on:dblclick="updateTodo(el,index)">{{el.title}}</label>
+                            <button v-on:click="deleteTodo(el)">X</button>
+                        </div>
+                        <div class="edit">
+                            <input type="text" v-model="el.title"
+                                   v-on:keyup.esc="cancelEdit(el)"
+                                   v-on:blur="doneEdit(el,index)"
+                                   v-on:keyup.enter="doneEdit(el,index)"
+                                   v-todo-focus="el == updateTodo" style="display: none;">
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div>
+                <div>
+                    <span style="padding-right: 100px;" v-cloak v-show="remaining">剩余{{remaining|pluralize}}:{{remaining}}</span>
+                </div>
+                <span><button v-on:click="clearDone" v-show="remaining<todoList.length">清除已完成</button></span>
+            </div>
+        </div>
+    </section>
+    <script src="../../../plugins/vuejs/vue.min.js"></script>
+    <script src="../../../plugins/jquery/jquery-2.2.3.min.js"></script>
+    <script src="../../../plugins/layui/layui.js"></script>
+    <script>
+        var layer;
+        layui.use(['layer'], function(){
+            layer = layui.layer;
+        });
+
+        //html本地存储 （键值对形式保存）
+        var STORAGE_KEY='wyy';
+        var myLocalData={
+            //读取数据源
+            fetch:function(){
+                var todos=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+                myLocalData.uid=todos.length;
+                todos.forEach(function (todo,index) {
+                    todo.id=index;
+                });
+                return todos;
+            },
+            //保存到本地
+            save:function(todos){
+                localStorage.setItem(STORAGE_KEY,JSON.stringify(todos));
+            }
+        };
+        //定义过滤器
+        var myFilters={
+            all:function(data){
+                return data;
+            },
+            active:function(data){
+                return data.filter(function(ele){
+                    return !ele.completed;
+                });
+            },
+            completed:function(data){
+                return data.filter(function(ele){
+                    return ele.completed;
+                });
+            }
+        }
+
+
+        var vm=new Vue({
+            el:'#todoApp',
+            data:{
+                todoList:myLocalData.fetch(),
+                newTodo:'',
+                todoType:'all',
+                editedTodo: null
+            },
+            watch:{
+                todoList:{
+                    handler:function(todos){
+                        myLocalData.save(todos);
+                    },
+                    deep:true
+                }
+            },
+            //computed属性:将原始数据localData以另一种形式呈现
+            //这里将定义即将用到的各种属性
+            computed:{
+                filterTodos:function(){
+                    return myFilters[this.todoType](this.todoList);
+                },
+                remaining:function(){
+                    return myFilters['active'](this.todoList).length;
+
+                },
+                allDone:function(){
+
+                }
+            },
+            filters:{
+                pluralize:function(e){
+                    return e===1?'一项':'多项';
+                }
+            },
+            methods:{
+                //新增记录
+                addNew:function(){
+                    var newOne={
+                        id:myLocalData.uid++,
+                        title:this.newTodo.trim(),
+                        completed:false
+                    };
+                    if(!newOne.title){
+                        layer.open({
+                            title:'error',
+                            content:'请输入内容',
+                            icon:2
+                        });
+                        return;
+                    }
+                    this.todoList.push(newOne);
+                    myLocalData.save(this.todoList);
+                    this.newTodo='';
+                    vm.todoType = 'all';
+                    window.location.hash='';
+                },
+                //删除已完成 （单条删除）
+                deleteTodo: function (el) {
+                    return this.todoList.splice(this.todoList.indexOf(el),1);
+                },
+                //切换至 未完成
+                active:function(){
+                    this.todoType='active';
+                },
+                //清除已完成（多条）
+                clearDone:function(){
+                   /*var all= myLocalData.fetch();
+                    var notDone= $.grep(all,function(ele){
+                        return !ele.completed;
+                    });
+                    myLocalData.save(notDone);*/
+                    this.todoList=myFilters['active'](this.todoList);
+                },
+                //修改
+                updateTodo:function(el,index){
+                    //alert("dd");
+                    $('#li'+index+' .view').css('display','none');
+                    $('#li'+index+' .edit>input').css('display','block');
+                    this.lastCache=el.title;
+                    this.editedTodo=el;
+                },
+                //取消修改
+                cancelEdit:function(todo){
+                    this.editedTodo=null;
+                    todo.title=this.lastCache;
+                },
+                //确认修改
+                doneEdit:function(todo,index){
+                    if(!this.editedTodo)return;
+                    this.editedTodo=null;
+                    todo.title=todo.title.trim();
+                    if(!todo.title){
+                        this.deleteTodo(todo);
+                    }
+                    $('#li'+index+' .edit>input').css('display','none');
+                    $('#li'+index+' .view').css('display','block');
+                }
+
+            },
+            directives: {
+                'todo-focus': function (el, binding) {
+                    if (binding.value) {
+                        el.focus()
+                    }
+                }
+            }
+        });
+
+        function onHashChange () {
+            var visibility = window.location.hash.replace(/#\/?/, '')
+            if (myFilters[visibility]) {
+                vm.todoType = visibility
+            } else {
+                window.location.hash = ''
+                vm.todoType = 'all'
+            }
+        }
+        window.addEventListener('hashchange', onHashChange);
+        onHashChange();
+    </script>
+</body>
+</html>

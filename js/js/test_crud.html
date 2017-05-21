@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <title>test01</title>
+    <script src="../plugins/jquery/jquery-2.2.3.min.js"></script>
+    <script src="../plugins/vuejs/vue.min.js"></script>
+    <script>
+        /*目的：
+         使用vuejs双向绑定，练习增删改数据
+         */
+        function renderNewLine(index){
+            var newLine=$("#tr"+index);
+            newLine.find('.name').attr('placeholder','请输入姓名');
+            newLine.find('.sex option:first-child').attr('selected','selected');
+            newLine.find('.age').attr('placeholder','请输入年龄');
+
+        }
+        var arr1=[1,2,3,5,6];
+        arr1.splice(4,1);
+        arr1;
+
+        var vm;
+        $(function(){
+            var dataSource=[{
+                name:'wyy',
+                sex:'male',
+                age:26
+            },{
+                name:'ztx',
+                sex:'female',
+                age:23
+            }];
+
+            // 注册
+            Vue.filter('my-filter', function (value) {
+                // 返回处理后的值
+                console.log(value);
+                if(value==''){
+                    return 'kong'
+                }
+            })
+            // getter，返回已注册的过滤器
+            var myFilter = Vue.filter('my-filter')
+
+            vm=new Vue({
+                el:"#tbl",
+                data:{
+                    people:dataSource,
+                    msg:''
+                },
+                filter:{
+                    filter01:function(value){
+                      console.log(value);
+                      if(value==''){
+                          return 'kong'
+                      }
+                  }
+                },
+                methods:{
+                    addLines:function(e){
+                        var newObj={
+                          name:'',
+                            sex:'',
+                            age:''
+                        };
+                        vm.people.push(newObj);
+                        vm.$nextTick(function(){
+                            var arr=vm.people;
+                            var rowIndex=arr.length-1;
+                            var newLine=arr[rowIndex];
+                            renderNewLine(rowIndex);
+                        });
+
+                    },
+                    saveLines:function(){
+                        alert(JSON.stringify(vm.people));
+                    },
+                    deleteLines:function(num){
+                        //var obj=vm.people[num];
+                        vm.people.splice(num,1);
+                    }
+                }
+            });
+
+
+        });
+    </script>
+</head>
+<body>
+    <div id="tbl">
+        <div>
+            <div>使用vuejs增删查改表格数据</div>
+            <div>
+                <button v-on:click="addLines">addLines</button>
+                <button v-on:click="saveLines">saveLines</button>
+            </div>
+        </div>
+        <div>
+            <table>
+                <tr>
+                    <th>序号</th>
+                    <th>姓名</th>
+                    <th>性别</th>
+                    <th>年龄</th>
+                    <th>删除</th>
+                </tr>
+                <tr v-for="(ele,index) in people" v-bind:id="'tr'+index">
+                    <td>{{index+1}}</td>
+                    <td><input class="name" v-model="ele.name"></td>
+                    <td>
+                        <select class="sex" v-model="ele.sex">
+                            <option value="female">female</option>
+                            <option value="male">male</option>
+                        </select>
+                    </td>
+                    <td><input class="age" v-model="ele.age"></td>
+                    <td><button v-on:click='deleteLines(index)'>x</button></td>
+                </tr>
+
+            </table>
+            <div style="border: red solid 1px;">
+                <span>{{msg | myFilter}}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

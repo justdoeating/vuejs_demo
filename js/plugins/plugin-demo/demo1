@@ -1,0 +1,46 @@
+/*
+ *!
+ * showModal v1.0.0
+ * Copyright 2017
+ * Created By Yuanye.Wang
+ * Licensed under the MIT license
+ * */
+    //优化版本
+   /*
+   * 1.开头的分号
+   * 2.传入的参数，尤其undefined*/
+   ;(function($, window, document,undefined) {
+        //定义Beautifier的构造函数
+        var defineModal = function(ele, opt) {
+            this.$element = ele;
+            this.defaults = {
+                title:'默认',
+                placeholder:'please input',
+                width:'300px',
+                height:'300px'
+            };
+            this.options = $.extend({}, this.defaults, opt);
+        }
+        //定义方法
+        defineModal.prototype = {
+            show: function() {
+                return this.$element.on('click',function(){
+                    alert('xxxx');
+                });
+            }
+        }
+        //在插件中使用对象
+        $.fn.myPlugin03 = function(options) {
+            return this.each(function(){
+                if(undefined==$(this).data('myPlugin03')){
+                    //创建Beautifier的实体
+                    var obj = new defineModal(this, options);
+                    $(this).data('myPlugin03',obj);
+                }
+                $(this).on('change',function(){
+                    alert('xx');
+                });
+
+            });
+        }
+    })(jQuery, window, document);

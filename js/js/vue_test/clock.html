@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script language="javascript">
+        var t = null;
+        t = setTimeout(time,1000);//开始执行
+        function time()
+        {
+            clearTimeout(t);//清除定时器
+            var dt = new Date();
+            var old1=new Date('2017/01/18');
+            var result=(dt-old1)/1000;
+            var result1=parseInt(result/(24*60*60));
+            var d=dt.getDate();
+            var h=dt.getHours();
+            var m=dt.getMinutes();
+            var s=dt.getSeconds();
+            document.getElementById("timeShow").innerHTML =  h+":"+m+":"+s;
+            document.getElementById("howmuchdays").innerHTML =  result1;
+            t = setTimeout(time,1000); //设定定时器，循环执行
+        }
+    </script>
+</head>
+<body>
+<div>认识你的：</div>
+<p>第<span id="howmuchdays"></span>天</p>
+<p id="timeShow"></p>
+</body>
+</html>

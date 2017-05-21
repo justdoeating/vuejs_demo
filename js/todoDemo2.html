@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v-bind="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="plugins/layui/css/layui.css">
+    <link rel="stylesheet" href="plugins/bootstrap-3.3.5/dist/css/bootstrap.css">
+    <style>
+
+        #toolbar{
+            padding-left: 10px;
+            padding-top: 10px;
+            padding-bottom:10px;
+        }
+
+        .selected{
+            background-color: #01AAED;
+        }
+        [v-cloak]{
+            display: none;
+        }
+        .completed{
+            color: #d9d9d9;
+            text-decoration: line-through;
+        }
+        .box{
+            width: 25px;
+            height: 25px;
+            margin-top: -5px;
+        }
+        .mySkin1{
+            background-image: url("plugins/img/02.jpeg");
+        }
+        .mySkin2{
+            background-image: url("plugins/img/travel.jpg");
+        }
+    </style>
+    <script src="plugins/layui/layui.js"></script>
+</head>
+<body>
+<section style="padding-left:300px;padding-right: 300px;padding-top: 30px;">
+    <div id="todoApp">
+        <div class="col-md-12 col-md-push-4">
+            <h2>My TodoList</h2>
+        </div>
+        <div>
+            <hr>
+        </div>
+        <div class="col-md-5 col-md-push-1">
+            <input class="form-control" v-on:keyup.enter="addNew"  id="addNew" v-model="newTodo" placeholder="请输入新的Todo...">
+        </div>
+        <div id="toolbar" class="col-md-5 col-md-push-2">
+            <a href="#/all" class="btn-sm btn" style="background-color: #2ddca5;color:white;" :class="{ selected: todoType == 'all' }">所有</a>
+            <a href="#/active" class="btn-sm btn btn-info" style="background-color: #2ddca5;color:white;" :class="{ selected: todoType == 'active' }">未做</a>
+            <a href="#/completed" class="btn-sm btn btn-info" style="background-color: #2ddca5;color:white;" :class="{ selected: todoType == 'completed' }">已做</a>
+        </div>
+        <div class="col-md-12">
+            <ul>
+                <li v-for="(el,index) in filterTodos" v-bind:id="'li'+index">
+                    <div class="view col-md-12" v-bind:class="{completed:el.completed}">
+                        <div class="col-md-1">
+                            <input class="form-control box" type="checkbox" v-model="el.completed">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="col-md-12" v-cloak v-on:dblclick="updateTodo(el,index)">{{el.title}}</label>
+
+                        </div>
+
+                        <div class="col-md-2">
+                            <button class="btn btn-danger btn-xs" v-on:click="deleteTodo(el)">删除</button>
+                        </div>
+                    </div>
+                    <div class="edit  col-md-12">
+                        <input class="form-control" type="text" v-model="el.title"
+                               v-on:keyup.esc="cancelEdit(el,index)"
+                               v-on:blur="doneEdit(el,index)"
+                               v-on:keyup.enter="doneEdit(el,index)"
+                               v-todo-focus="el == updateTodo" style="display: none;">
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-12">
+            <hr>
+        </div>
+        <div class="col-md-12">
+            <div class="col-md-4">
+                <span v-cloak v-show="remaining">剩余{{remaining|pluralize}}:{{remaining}} 项</span>
+            </div>
+            <div class="col-md-8 col-md-push-5">
+                <button class="btn btn-sm" v-on:click="clearDone" style="background-color: #2ddca5;color:white;" v-show="remaining<todoList.length">清除已完成</button>
+            </div>
+        </div>
+    </div>
+</section>
+<script src="plugins/vuejs/vue.min.js"></script>
+<script src="plugins/jquery/jquery-2.2.3.min.js"></script>
+<script>
+
+    // congratulations
+    // *******'王周电码'*******
+    dic = {
+        'a':'.-.', 'b':'-....', 'c':'-.-..', 'd':'-...', 'e':'..','f':'..-..', 'g':'--..', 'h':'.....', 'i':'...', 'j':'.---.',
+        'k':'-.-.', 'l':'.-...', 'm':'--.', 'n':'-..', '.':'---.', 'p':'.--..', 'q':'--.-.', 'r':'.-..', 's':'....', 't':'-.',
+        'u':'..-.', 'v':'...-.', 'w':'.--.', 'x':'-..-.', 'y':'-.--.', 'z':'--...',',':'--..--.',
+        '0':'-----.','1':'.----.','2':'..---.','3':'...--.','4':'....-.','5':'......','6':'-.....','7':'--....','8':'---...','9':'----..'
+    }
+    //========练习区域=========
+
+    var leftClue='...../..../.../.-.../--../-../.../...../-.-../--..--./-...../-----./--..--./....../-----.';
+
+
+
+
+    console.log('把破译的打印出来吧！！！');
+
+    //==========练习区域END==============
+    //提示框使用layer插件
+    layui.use(['layer'], function(){
+        //实例化layer对象
+        var layer = layui.layer;
+
+        //html本地存储策略， （键值对形式保存）
+        var STORAGE_KEY='grow quickly';
+        var everyDay=[{
+            id:0,
+            title:'想念一下那个对我还不错的傻小子',
+            completed:false
+        },{
+            id:1,
+            title:'今晚得去跑步',
+            completed:false
+        },{
+            id:2,
+            title:'今天本姑娘坚决不熬夜，除非~~',
+            completed:false
+        },{
+            id:3,
+            title:'吃点好的很重要，水果，鸡蛋全都来',
+            completed:false
+        }];
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(everyDay));
+        var myLocalData={
+            //读取本地数据
+            fetch:function(){
+                var todos=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+                myLocalData.uid=todos.length;
+                todos.forEach(function (todo,index) {
+                    todo.id=index;
+                });
+                return todos;
+            },
+            //保存数据到本地
+            save:function(todos){
+                localStorage.setItem(STORAGE_KEY,JSON.stringify(todos));
+            }
+        };
+
+        //自定义 过滤器对象
+        var myFilters={
+            all:function(data){
+                return data;
+            },
+            active:function(data){
+                return data.filter(function(ele){
+                    return !ele.completed;
+                });
+            },
+            completed:function(data){
+                return data.filter(function(ele){
+                    return ele.completed;
+                });
+            }
+        }
+
+        //自定义layer弹窗，想看你笑的样子！！
+        var showCompleted=function(a,b){
+            var baseData=myLocalData.fetch();
+            if(baseData.length&&baseData.length>0){
+                if(a==='completed'&&b===0){
+                    layer.open({
+                        title: "<h4 style='font-family: cursive;font-size: large;color: darksalmon;'>看着我的眼睛 ,居然一个都还没完成.</h4>",
+                        skin:'mySkin1',
+                        area:['700px', '600px'],
+                        btn:['马上行动 ヾ(≧O≦)〃'],
+                        btn1:function(index,ele){
+                            layer.close(index);
+                            location.hash='';
+                            vm.todoType='all';
+                        }
+                    });
+                };
+            }else{
+                layer.msg('还木有一条，快添加一条吧');
+            }
+
+        }
+        //实例化 vue对象
+        var vm=new Vue({
+            el:'#todoApp',
+            data:{
+                todoList:myLocalData.fetch(),
+                newTodo:'',
+                todoType:'all',
+                editedTodo: null
+            },
+            //监听属性：watch中的属性对象都是data中已有的属性，即对已有数据进行监听，参考 VUE API
+            watch:{
+                todoList:{
+                    handler:function(todos){
+                        myLocalData.save(todos);
+                    },
+                    deep:true
+                }
+            },
+            //computed属性:（个人理解）将原始数据localData以另一种形式呈现
+            //这里将定义即将用到的各种临时属性，
+            computed:{
+                //如：将原始数据按不同条件处理，从而获得新的属性filterTodos
+                filterTodos:function(){
+                    var dataArray= myFilters[this.todoType](this.todoList);
+                    showCompleted(this.todoType,dataArray.length);
+
+                    return dataArray;
+                },
+                //定义了一个属性，用来表示剩下的todo数量
+                remaining:function(){
+                    return myFilters['active'](this.todoList).length;
+                }
+            },
+            //过滤器属性，在html中可直接在插值表达式中通过管道连接符 '|' 使用，即{{ someValue | pluralize}}
+            filters:{
+                pluralize:function(e){
+                    return e===1?'一项':'多项';
+                }
+            },
+            // 方法属性：各种要用的function在这里，看过来
+            methods:{
+                //新增记录
+                addNew:function(){
+                    var newOne={
+                        id:myLocalData.uid++,
+                        title:this.newTodo.trim(),
+                        completed:false
+                    };
+                    if(!newOne.title){
+                        layer.open({
+                            title:'你想干嘛?',
+                            content:'乖乖输入内容知道不',
+                            icon:3
+                        });
+                        return;
+                    }
+
+                    //过多提示
+                    if(this.todoList.length>5){
+                        layer.msg('任务太多啦，瘦了先掉胸yo~(≧O≦)');
+                    }
+                    if(this.todoList.length>7){
+                        layer.msg('不许你太累!!ヾ(≧O≦)〃');
+                        $('#addNew').attr('placeholder','就是输入不了，你改源码啊');
+                        this.newTodo='';
+                        return false;
+                    }
+                    this.todoList.push(newOne);
+                    myLocalData.save(this.todoList);
+                    this.newTodo='';
+                    vm.todoType = 'all';
+                    window.location.hash='';
+                },
+                //删除已完成 （单条删除）
+                deleteTodo: function (el) {
+                    if(!el.completed){
+                        layer.confirm('周同学，完成了没？你就开始删除？ ', {
+                            btn: ['完成啦','木有']
+                        },function(){
+                            vm.todoList.splice(vm.todoList.indexOf(el),1);
+                            layer.msg('已经删啦(≧O≦)');
+                            return ;
+                        });
+                    }else{
+                        vm.todoList.splice(vm.todoList.indexOf(el),1);
+                        layer.msg('已经删啦(≧O≦)');
+                    }
+
+                },
+                //切换至 未完成
+                active:function(){
+                    this.todoType='active';
+                },
+                //清除已完成（多条）
+                clearDone:function(){
+                    this.todoList=myFilters['active'](this.todoList);
+                },
+                //修改
+                updateTodo:function(el,index){
+                    //alert("dd");
+                    $('#li'+index+' .view').css('display','none');
+                    $('#li'+index+' .edit>input').css('display','block');
+                    $('#li'+index+' .edit>input').focus();
+                    this.lastCache=el.title;
+                    this.editedTodo=el;
+                },
+                //取消修改
+                cancelEdit:function(todo,index){
+                    this.editedTodo=null;
+                    todo.title=this.lastCache;
+                    $('#li'+index+' .edit>input').css('display','none');
+                    $('#li'+index+' .view').css('display','block');
+                },
+                //确认修改
+                doneEdit:function(todo,index){
+                    if(!this.editedTodo)return;
+                    this.editedTodo=null;
+                    todo.title=todo.title.trim();
+                    if(!todo.title){
+                        this.deleteTodo(todo);
+                    }
+                    $('#li'+index+' .edit>input').css('display','none');
+                    $('#li'+index+' .view').css('display','block');
+                }
+            },
+            directives: {
+                'todo-focus': function (el, binding) {
+                    if (binding.value) {
+                        el.focus()
+                    }
+                }
+            }
+        });
+
+        //三种类型按钮对应三种URL，截取URL从而获得不同的 todoType ，
+        function onHashChange () {
+            var type = window.location.hash.replace(/#\/?/, '')
+            if (myFilters[type]) {
+                vm.todoType = type
+            } else {
+                window.location.hash = ''
+                vm.todoType = 'all'
+            }
+        }
+
+        //为window对象的hashchange事件添加监听，指定回调函数
+        window.addEventListener('hashchange', onHashChange);
+
+
+        var leftMsg01_1='.----/.-.-.-/-..----.--...../---.---....-.--/-.-..-...--..../---.--.-....-../';
+        var leftMsg01_2= '-..-------....-/--......--.----/-.---....--...-/-.-....--..----/--...-....-...-/';
+        var leftMsg01_3= '-.--.-------..-/-..----.--...../---.--.-....-../---..-...--...-/--------....--../' ;
+        var leftMsg01_4= '-..----.--...../---.---....-.--/-.-..-...--..../---.--.-....-../-.-..-----.-.-./' ;
+        var leftMsg01_5= '--..--...-.----/-.-...--.--..../-.---...---...-/-..---........./-...-..---.-..-.';
+        var leftMsg02='..---/.-.-.-/.----./---..---...-.--/-.-.-...--.-.../---.-.-..--.-.-/----..........-/.----./--..--/.---/.../-...-..----...--/--..----..-..../--..--/--.---.-..-..../----..........-';
+        //为checkbox添加click事件
+        function listenClick(){
+            var array02=$('.box').toArray() ;
+            array02.forEach(function(ele,index){
+                ele.addEventListener('click',function(e){
+                    if(e.currentTarget.checked){
+                        var activeLen=myFilters['active'](vm.todoList).length;
+                        // var allLen=myFilters['all'](this.todoList).length;
+                        if(activeLen==0){
+                            layer.confirm('美女，敢玩点刺激的吗？xiuxiu~~',{btn:['怕你啊','色色的，肯定没好事']}, function(){
+                                layer.open({
+                                    title: "<h4 style='font-family: cursive;font-size: large;color: darksalmon;'>线索和规则：</h4>",
+                                    skin:'mySkin2',
+                                    content:"<p style='color:#d2d2d2;font-size: large;'>"+leftMsg01_1+"</p>" +
+                                    "<hr style='color:white;'>" +
+                                    "<p style='color:#d2d2d2;font-size: large;'>"+leftMsg01_2+"</p>" +
+                                    "<hr style='color:white;'>" +
+                                    "<p style='color:#d2d2d2;font-size: large;'>"+leftMsg01_3+"</p>" +
+                                    "<hr style='color:white;'>" +
+                                    "<p style='color:#d2d2d2;font-size: large;'>"+leftMsg01_4+"</p>" +
+                                    "<hr style='color:white;'>" +
+                                    "<p style='color:#d2d2d2;font-size: large;'>"+leftMsg01_5+"</p>" +
+                                    "<hr style='color:white;'>" +
+                                    "<hr style='color:white;'>" +
+                                    "<hr style='color:white;'>" +
+                                    "<hr style='color:white;'>" +
+                                    "<span id='leftMsg02' style='color:rgba(0, 0, 0, 0);'>"+leftMsg02+"</span>",
+                                    area:['800px', '600px'],
+                                    btn:['开始解密 ヾ(≧O≦)〃'],
+                                    btn1:function(index,ele){
+                                        layer.prompt({
+                                            formType: 2,
+                                            value: '记的‘王周密码’的格式,会写吗？快试试你找到的密码吧',
+                                            title: '3.welcome',
+                                            area: ['400px', '260px'] //自定义文本域宽高
+                                        },function(value,index,ele){
+                                            if(value=='../.-../-.--./...'){
+                                                alert('猴赛雷，摸摸大~~,记住这个Chinglish。快去打开压缩包吧。');
+                                                layer.close(index);
+                                            }
+                                        });
+
+                                    },
+
+                                });
+                            });
+                        }else{
+                            layer.msg('完成了一件事，棒棒哒~(≧O≦)');
+                        }
+                    }else{
+                        layer.msg('咋地，还想再做一遍？');
+                    }
+                });
+            });
+        }
+
+        window.addEventListener('click', listenClick);
+        onHashChange();
+    });
+</script>
+</body>
+</html>
